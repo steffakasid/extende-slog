@@ -79,6 +79,8 @@ func (l ExtendedSlogLogger) Fatal(msg string) {
 	os.Exit(1)
 }
 
-func (l ExtendedSlogLogger) Fatalf(format string, args ...any) {
-	l.Fatal(fmt.Sprintf(format, args...))
+func (l ExtendedSlogLogger) Fatalf(format string, err error, args ...any) {
+	if err != nil {
+		l.Fatal(fmt.Sprintf(format, args...))
+	}
 }
