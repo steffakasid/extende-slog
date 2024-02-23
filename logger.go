@@ -70,8 +70,10 @@ func (l ExtendedSlogLogger) Error(err error, args ...any) {
 	}
 }
 
-func (l ExtendedSlogLogger) Errorf(format string, args ...any) {
-	l.Logger.Error(fmt.Sprintf(format, args...))
+func (l ExtendedSlogLogger) Errorf(format string, err error, args ...any) {
+	if err != nil {
+		l.Logger.Error(fmt.Sprintf(format, err, args...))
+	}
 }
 
 func (l ExtendedSlogLogger) Fatal(msg string) {
@@ -81,6 +83,6 @@ func (l ExtendedSlogLogger) Fatal(msg string) {
 
 func (l ExtendedSlogLogger) Fatalf(format string, err error, args ...any) {
 	if err != nil {
-		l.Fatal(fmt.Sprintf(format, args...))
+		l.Fatal(fmt.Sprintf(format, err, args...))
 	}
 }
