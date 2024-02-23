@@ -3,8 +3,11 @@ package extendedslog
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"reflect"
+	"slices"
 )
 
 const (
@@ -23,8 +26,12 @@ var Logger *ExtendedSlogLogger
 
 var LogLevel = &slog.LevelVar{}
 
-func InitLogger() {
-	if Logger == nil {
+func init() {
+	InitLogger(os.Stdout, false)
+}
+
+func InitLogger(writer io.Writer, overwrite bool) {
+	if Logger == nil || overwrite {
 		LogLevel.Set(slog.LevelDebug)
 
 		opts := &slog.HandlerOptions{
@@ -43,12 +50,16 @@ func InitLogger() {
 		}
 
 		Logger = &ExtendedSlogLogger{
-			slog.New(slog.NewTextHandler(os.Stdout, opts)),
+			slog.New(slog.NewTextHandler(writer, opts)),
 		}
 	}
 }
 
-func (l ExtendedSlogLogger) SetLogLevel(lvl string) error {
+func (l *ExtendedSlogLogger) SetOutput(w io.Writer) {
+	InitLogger(w, true)
+}
+
+func (l *ExtendedSlogLogger) SetLogLevel(lvl string) error {
 	return LogLevel.UnmarshalText([]byte(lvl))
 }
 
@@ -71,8 +82,10 @@ func (l ExtendedSlogLogger) Error(err error, args ...any) {
 }
 
 func (l ExtendedSlogLogger) Errorf(format string, err error, args ...any) {
+
 	if err != nil {
-		l.Logger.Error(fmt.Sprintf(format, err, args...))
+		args = slices.Insert(args, 0, reflect.ValueOf(err).Interface())
+		l.Logger.Error(fmt.Sprintf(format, args...))
 	}
 }
 
@@ -83,6 +96,7 @@ func (l ExtendedSlogLogger) Fatal(msg string) {
 
 func (l ExtendedSlogLogger) Fatalf(format string, err error, args ...any) {
 	if err != nil {
-		l.Fatal(fmt.Sprintf(format, err, args...))
+		args = slices.Insert(args, 0, reflect.ValueOf(err).Interface())
+		l.Fatal(fmt.Sprintf(format, args...))
 	}
 }
