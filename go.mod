@@ -1,4 +1,4 @@
-module github.com/steffakasid/extended-slog
+module github.com/steffakasid/eslog
 
 go 1.21.7
 

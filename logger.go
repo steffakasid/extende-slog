@@ -1,4 +1,4 @@
-package extendedslog
+package eslog
 
 import (
 	"context"
@@ -6,40 +6,46 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"reflect"
-	"slices"
+	"strings"
 )
 
+// LevelFatal the constant to represent the fatal log level
 const (
 	LevelFatal = slog.Level(12)
 )
 
-var LevelNames = map[slog.Leveler]string{
+// levelNames maps the LevelFatal to string "FATAL"
+var levelNames = map[slog.Leveler]string{
 	LevelFatal: "FATAL",
 }
 
-type ExtendedSlogLogger struct {
+// eSlogLogger is used to extend slog.
+type eSlogLogger struct {
 	*slog.Logger
 }
 
-var Logger *ExtendedSlogLogger
+// Logger is the default logger which extends slog.
+var Logger *eSlogLogger
 
-var LogLevel = &slog.LevelVar{}
+// logLevel holds the log level of the logger.
+var logLevel = &slog.LevelVar{}
 
 func init() {
-	InitLogger(os.Stdout, false)
+	initLogger(os.Stdout, false)
 }
 
-func InitLogger(writer io.Writer, overwrite bool) {
+// initLogger initializes the Logger and enables LevelFatal. Also it sets the default log
+// level to LevelDebug
+func initLogger(writer io.Writer, overwrite bool) {
 	if Logger == nil || overwrite {
-		LogLevel.Set(slog.LevelDebug)
+		logLevel.Set(slog.LevelDebug)
 
 		opts := &slog.HandlerOptions{
-			Level: LogLevel,
+			Level: logLevel,
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				if a.Key == slog.LevelKey {
 					level := a.Value.Any().(slog.Level)
-					levelLabel, exists := LevelNames[level]
+					levelLabel, exists := levelNames[level]
 					if !exists {
 						levelLabel = level.String()
 					}
@@ -49,54 +55,141 @@ func InitLogger(writer io.Writer, overwrite bool) {
 			},
 		}
 
-		Logger = &ExtendedSlogLogger{
-			slog.New(slog.NewTextHandler(writer, opts)),
+		Logger = &eSlogLogger{
+			Logger: slog.New(slog.NewTextHandler(writer, opts)),
 		}
 	}
 }
 
-func (l *ExtendedSlogLogger) SetOutput(w io.Writer) {
-	InitLogger(w, true)
+// SetOutput can be used to overwrite the default output writer os.Stdout. Can be used for
+// testing purposes or to swich logging to os.Stderr. In fact that function reinitializes
+// the Logger.
+func (l *eSlogLogger) SetOutput(w io.Writer) {
+	initLogger(w, true)
 }
 
-func (l *ExtendedSlogLogger) SetLogLevel(lvl string) error {
-	return LogLevel.UnmarshalText([]byte(lvl))
+// SetLogLevel sets the LogLevel of the Logger
+func (l *eSlogLogger) SetLogLevel(lvl string) error {
+	return logLevel.UnmarshalText([]byte(lvl))
 }
 
-func (l ExtendedSlogLogger) Debugf(format string, args ...any) {
+// Debugf logs at [LevelDebug]. Multiple args are joined with "  ".
+func Debug(args ...any) {
+	Logger.Debug(strings.Join(convertAnyToString(args...), " "))
+}
+
+// Debugf logs at [LevelDebug]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func Debugf(format string, args ...any) {
+	Logger.Debugf(format, args...)
+}
+
+// Debugf logs at [LevelDebug]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func (l eSlogLogger) Debugf(format string, args ...any) {
 	l.Debug(fmt.Sprintf(format, args...))
 }
 
-func (l ExtendedSlogLogger) Infof(format string, args ...any) {
+// Infof logs at [LevelInfo]. Multiple args are joined with "  ".
+func Info(args ...any) {
+	Logger.Info(strings.Join(convertAnyToString(args...), " "))
+}
+
+// Infof logs at [LevelInfo]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func Infof(format string, args ...any) {
+	Logger.Infof(format, args...)
+}
+
+// Infof logs at [LevelInfo]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func (l eSlogLogger) Infof(format string, args ...any) {
 	l.Info(fmt.Sprintf(format, args...))
 }
 
-func (l ExtendedSlogLogger) Warnf(format string, args ...any) {
+// Warn logs at [LevelWarn]. Multiple args are joined with "  ".
+func Warn(args ...any) {
+	Logger.Warn(strings.Join(convertAnyToString(args...), " "))
+}
+
+// Fatalf logs at [LevelWarn]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func Warnf(format string, args ...any) {
+	Logger.Warnf(format, args...)
+}
+
+// Fatalf logs at [LevelWarn]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func (l eSlogLogger) Warnf(format string, args ...any) {
 	l.Warn(format, args...)
 }
 
-func (l ExtendedSlogLogger) Error(err error, args ...any) {
-	if err != nil {
-		l.Logger.Error(err.Error(), args...)
-	}
+// Error logs at [LevelError]. Multiple args are joined with "  ".
+func Error(args ...any) {
+	Logger.Error(strings.Join(convertAnyToString(args...), " "))
 }
 
-func (l ExtendedSlogLogger) Errorf(format string, err error, args ...any) {
-
-	if err != nil {
-		args = slices.Insert(args, 0, reflect.ValueOf(err).Interface())
-		l.Logger.Error(fmt.Sprintf(format, args...))
-	}
+// Errorf logs at [LevelError]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func Errorf(format string, args ...any) {
+	Logger.Errorf(format, args...)
 }
 
-func (l ExtendedSlogLogger) Fatal(msg string) {
-	l.Log(context.Background(), LevelFatal, msg)
+// Errorf logs at [LevelError]. The function uses fmt.Sprintf with given format and args
+// and log it.
+func (l eSlogLogger) Errorf(format string, args ...any) {
+	Logger.Error(fmt.Sprintf(format, args...))
+}
+
+// Fatal logs at [LevelFatal].  Multiple args are joined with " ".
+func Fatal(args ...any) {
+	Logger.Fatal(strings.Join(convertAnyToString(args...), " "))
+}
+
+// Fatalf logs at [LevelFatal]. The function uses fmt.Sprintf with given format and args
+// and log it. Also it calls os.Exit(1).
+func Fatalf(format string, args ...any) {
+	Logger.Fatalf(format, args...)
+}
+
+// Fatal logs at [LevelFatal]. Also it calls os.Exit(1).
+func (l eSlogLogger) Fatal(msg string, args ...any) {
+	l.Log(context.Background(), LevelFatal, msg, args...)
 	os.Exit(1)
 }
 
-func (l ExtendedSlogLogger) Fatalf(format string, err error, args ...any) {
+// Fatalf logs at [LevelFatal]. The function uses fmt.Sprintf with given format and args
+// and log it. Also it calls os.Exit(1).
+func (l eSlogLogger) Fatalf(format string, args ...any) {
+	l.Fatal(fmt.Sprintf(format, args...))
+}
+
+// LogIfError check the given error. If error is nil nothing is logged. If error is not
+// nil the loggerFunc is used to log the args. The error is not automatically added to
+// args.
+func LogIfError(err error, loggerFunc func(args ...any), args ...any) {
 	if err != nil {
-		args = slices.Insert(args, 0, reflect.ValueOf(err).Interface())
-		l.Fatal(fmt.Sprintf(format, args...))
+		loggerFunc(args...)
 	}
+}
+
+// LogIfErrorf checks the given error. If error is nil nothing is logged. If error is not
+// nil the loggerFuncf is used with the given format to print the given args. The error is
+// not automatically added to args.
+func LogIfErrorf(err error, loggerFuncf func(format string, args ...any), format string, args ...any) {
+	if err != nil {
+		loggerFuncf(format, args...)
+	}
+}
+
+// convertAnyToString converts all args of type any to string and
+// returns them as []string
+func convertAnyToString(args ...any) (strArr []string) {
+	strArr = []string{}
+
+	for _, something := range args {
+		strArr = append(strArr, fmt.Sprintf("%v", something))
+	}
+
+	return strArr
 }
