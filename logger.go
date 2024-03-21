@@ -166,19 +166,27 @@ func (l eSlogLogger) Fatalf(format string, args ...any) {
 
 // LogIfError check the given error. If error is nil nothing is logged. If error is not
 // nil the loggerFunc is used to log the args. The error is not automatically added to
-// args.
+// args except args are empty.
 func LogIfError(err error, loggerFunc func(args ...any), args ...any) {
 	if err != nil {
-		loggerFunc(args...)
+		if len(args) == 0 {
+			loggerFunc(err)
+		} else {
+			loggerFunc(args...)
+		}
 	}
 }
 
 // LogIfErrorf checks the given error. If error is nil nothing is logged. If error is not
 // nil the loggerFuncf is used with the given format to print the given args. The error is
-// not automatically added to args.
+// not automatically added to args except args are empty.
 func LogIfErrorf(err error, loggerFuncf func(format string, args ...any), format string, args ...any) {
 	if err != nil {
-		loggerFuncf(format, args...)
+		if len(args) == 0 {
+			loggerFunc(format, err)
+		} else {
+			loggerFuncf(format, args...)
+		}
 	}
 }
 
