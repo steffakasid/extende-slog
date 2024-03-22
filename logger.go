@@ -183,7 +183,7 @@ func LogIfError(err error, loggerFunc func(args ...any), args ...any) {
 func LogIfErrorf(err error, loggerFuncf func(format string, args ...any), format string, args ...any) {
 	if err != nil {
 		if len(args) == 0 {
-			loggerFunc(format, err)
+			loggerFuncf(format, err)
 		} else {
 			loggerFuncf(format, args...)
 		}
